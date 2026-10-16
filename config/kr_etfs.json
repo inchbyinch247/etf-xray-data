@@ -1,0 +1,5 @@
+{
+  "_설명": "exclude: 빼고 싶은 국내 ETF 6자리 코드 / include: 순자산·분류와 상관없이 꼭 넣을 코드",
+  "exclude": [],
+  "include": []
+}

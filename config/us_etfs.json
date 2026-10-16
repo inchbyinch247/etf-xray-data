@@ -1,0 +1,20 @@
+{
+  "_설명": "exclude: 빼고 싶은 ETF 티커 / include: 순위·주식비중과 상관없이 꼭 넣을 티커 / names: 앱에 보일 이름 바꾸기",
+  "exclude": [],
+  "include": [],
+  "names": {
+    "VOO": "Vanguard S&P 500 ETF",
+    "VTI": "Vanguard Total Stock Market ETF",
+    "VXUS": "Vanguard Total International Stock ETF",
+    "VEA": "Vanguard FTSE Developed Markets ETF",
+    "VWO": "Vanguard FTSE Emerging Markets ETF",
+    "VUG": "Vanguard Growth ETF",
+    "VTV": "Vanguard Value ETF",
+    "VIG": "Vanguard Dividend Appreciation ETF",
+    "VYM": "Vanguard High Dividend Yield ETF",
+    "VGT": "Vanguard Information Technology ETF",
+    "VO": "Vanguard Mid-Cap ETF",
+    "VB": "Vanguard Small-Cap ETF",
+    "VT": "Vanguard Total World Stock ETF"
+  }
+}

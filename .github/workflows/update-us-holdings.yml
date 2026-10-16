@@ -1,0 +1,40 @@
+name: 미국 ETF 구성종목 갱신
+
+on:
+  schedule:
+    - cron: "17 3 6 * *"   # 매월 6일 03:17 UTC (한국 12:17). SEC 데이터는 분기마다 갱신된다
+  workflow_dispatch:        # Actions 탭에서 'Run workflow'로 바로 실행
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: 수집
+        env:
+          SEC_USER_AGENT: ${{ vars.SEC_USER_AGENT || 'etf-xray-data inchbyinch247@users.noreply.github.com' }}
+          OPENFIGI_API_KEY: ${{ secrets.OPENFIGI_API_KEY }}
+        run: |
+          python -m pipeline.us_holdings --top 300
+          python -m pipeline.publish
+      - name: 결과 저장
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs cache reports
+          if git diff --cached --quiet; then echo "바뀐 내용 없음"; exit 0; fi
+          git commit -m "미국 ETF 구성종목 갱신 $(date -u +%Y-%m-%d)"
+          git pull --rebase origin main
+          git push
