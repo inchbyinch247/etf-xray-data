@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-10-16T08:58:17+00:00",
+  "datasets": [
+    "2026q3_nport.zip",
+    "2026q2_nport.zip"
+  ],
+  "etfCount": 300,
+  "stockCount": 3727
+}
