@@ -308,6 +308,11 @@ def build(zips: list[Path], series_to_ticker: dict[str, str], top: int) -> None:
     for k, cnt in stock_names.items():
         if normalize_us_ticker(k) == k and k not in etf_set:
             stocks.append({"ticker": k, "name": cnt.most_common(1)[0][0], "kind": "STOCK", "market": "US"})
+    # GOOGL·GOOG처럼 이름이 같은 종목은 앱에서 구분되게 티커를 붙인다
+    dup = Counter(s["name"] for s in stocks)
+    for s in stocks:
+        if dup[s["name"]] > 1:
+            s["name"] = f"{s['name']} ({s['ticker']})"
     stocks.sort(key=lambda s: s["ticker"])
     write_json(OUT / "instruments_us.json", etf_index + stocks)
     write_json(CACHE / "us_meta.json", {
