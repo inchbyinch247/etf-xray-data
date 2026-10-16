@@ -13,6 +13,7 @@ def env(tmp_path, monkeypatch):
         monkeypatch.setattr(kr_holdings, name, tmp_path / sub)
     (tmp_path / "cache").mkdir()
     (tmp_path / "cache/us_isin_ticker.json").write_text(json.dumps({"US0378331005": "AAPL"}))
+    (tmp_path / "cache/us_isin_price.json").write_text(json.dumps({"US0378331005": 200.0, "US5949181045": 400.0}))
     return tmp_path
 
 
@@ -23,6 +24,7 @@ PRICES = [
     {"ISU_SRT_CD": "153130", "ISU_ABBRV": "KODEX 단기채권", "INVSTASST_NETASST_TOTAMT": "1,500,000,000,000"},
     {"ISU_SRT_CD": "999990", "ISU_ABBRV": "작은 ETF", "INVSTASST_NETASST_TOTAMT": "50,000,000,000"},
     {"ISU_SRT_CD": "888880", "ISU_ABBRV": "스왑형 ETF", "INVSTASST_NETASST_TOTAMT": "300,000,000,000"},
+    {"ISU_SRT_CD": "133690", "ISU_ABBRV": "TIGER 미국나스닥100", "INVSTASST_NETASST_TOTAMT": "5,000,000,000,000"},
 ]
 INFO = [
     {"ISU_SRT_CD": "069500", "ISU_CD": "KR7069500007", "IDX_ASST_CLSS_NM": "주식", "COM_ABBRV": "삼성자산운용"},
@@ -30,6 +32,7 @@ INFO = [
     {"ISU_SRT_CD": "122630", "ISU_CD": "KR7122630007", "IDX_ASST_CLSS_NM": "주식", "COM_ABBRV": "삼성자산운용"},
     {"ISU_SRT_CD": "153130", "ISU_CD": "KR7153130000", "IDX_ASST_CLSS_NM": "채권", "COM_ABBRV": "삼성자산운용"},
     {"ISU_SRT_CD": "888880", "ISU_CD": "KR7888880000", "IDX_ASST_CLSS_NM": "주식", "COM_ABBRV": "어딘가운용"},
+    {"ISU_SRT_CD": "133690", "ISU_CD": "KR7133690008", "IDX_ASST_CLSS_NM": "주식", "COM_ABBRV": "미래에셋자산운용"},
 ]
 PDF = {
     "KR7069500007": [
@@ -46,6 +49,11 @@ PDF = {
         {"COMPST_ISU_CD": "US5949181045X", "COMPST_ISU_NM": "이상한 코드", "COMPST_RTO": "", "VALU_AMT": "0"},
         {"COMPST_ISU_CD": "OTHR", "COMPST_ISU_NM": "OTHERS", "COMPST_RTO": "", "VALU_AMT": "840"},
         {"COMPST_ISU_CD": "", "COMPST_ISU_NM": "USD 현금", "COMPST_RTO": "", "VALU_AMT": "10"},
+    ],
+    "KR7133690008": [  # 실제 KRX 응답: 해외 종목은 주식 수만, 금액·비중은 "-"
+        {"COMPST_ISU_CD": "US0378331005", "COMPST_ISU_NM": "APPLE INC", "COMPST_ISU_CU1_SHRS": "3", "VALU_AMT": "-", "COMPST_RTO": "-"},
+        {"COMPST_ISU_CD": "US5949181045", "COMPST_ISU_NM": "MICROSOFT CORP", "COMPST_ISU_CU1_SHRS": "1", "VALU_AMT": "-", "COMPST_RTO": "-"},
+        {"COMPST_ISU_CD": "", "COMPST_ISU_NM": "원화현금", "COMPST_ISU_CU1_SHRS": "", "VALU_AMT": "1,000", "COMPST_RTO": "-"},
     ],
     "KR7888880000": [
         {"COMPST_ISU_CD": "", "COMPST_ISU_NM": "TRS 스왑", "COMPST_RTO": "95", "VALU_AMT": "950"},
@@ -68,7 +76,12 @@ def test_kr_flow(env, monkeypatch):
     kr_holdings.build(kr_holdings.MIN_AUM, dt.date(2026, 10, 16))
 
     out = env / "docs/v1"
-    assert sorted(p.stem for p in (out / "holdings").glob("*.json")) == ["069500", "360750"]
+    assert sorted(p.stem for p in (out / "holdings").glob("*.json")) == ["069500", "133690", "360750"]
+
+    nq = json.loads((out / "holdings/133690.json").read_text())
+    w = {c["ticker"]: c["weight"] for c in nq["constituents"]}
+    assert w == {"AAPL": 60.0, "US5949181045": 40.0}       # 3×200 : 1×400, 현금 제외
+    assert "추정" in nq["source"]
 
     k200 = json.loads((out / "holdings/069500.json").read_text())
     w = {c["ticker"]: c["weight"] for c in k200["constituents"]}

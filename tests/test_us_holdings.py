@@ -15,7 +15,7 @@ def tsv(rows, cols):
 SUB = ["ACCESSION_NUMBER", "FILING_DATE", "FILE_NUM", "SUB_TYPE", "REPORT_ENDING_PERIOD", "REPORT_DATE", "IS_LAST_FILING"]
 INFO = ["ACCESSION_NUMBER", "SERIES_NAME", "SERIES_ID", "SERIES_LEI", "TOTAL_ASSETS", "NET_ASSETS"]
 HOLD = ["ACCESSION_NUMBER", "HOLDING_ID", "ISSUER_NAME", "ISSUER_LEI", "ISSUER_TITLE", "ISSUER_CUSIP",
-        "BALANCE", "PERCENTAGE", "PAYOFF_PROFILE", "ASSET_CAT", "ISSUER_TYPE", "INVESTMENT_COUNTRY"]
+        "BALANCE", "UNIT", "CURRENCY_VALUE", "PERCENTAGE", "PAYOFF_PROFILE", "ASSET_CAT", "ISSUER_TYPE", "INVESTMENT_COUNTRY"]
 IDS = ["HOLDING_ID", "IDENTIFIERS_ID", "IDENTIFIER_ISIN", "IDENTIFIER_TICKER", "OTHER_IDENTIFIER", "OTHER_IDENTIFIER_DESC"]
 
 
@@ -45,8 +45,9 @@ def env(tmp_path, monkeypatch):
     return tmp_path, calls
 
 
-def holding(acc, hid, name, cusip, pct, cat="EC", payoff="Long", country="US"):
+def holding(acc, hid, name, cusip, pct, cat="EC", payoff="Long", country="US", shares="", value=""):
     return dict(ACCESSION_NUMBER=acc, HOLDING_ID=hid, ISSUER_NAME=name, ISSUER_TITLE=name,
+                BALANCE=shares, UNIT="NS" if shares else "", CURRENCY_VALUE=value,
                 ISSUER_CUSIP=cusip, PERCENTAGE=pct, PAYOFF_PROFILE=payoff, ASSET_CAT=cat,
                 INVESTMENT_COUNTRY=country)
 
@@ -79,7 +80,7 @@ def test_full_flow(env):
         dict(ACCESSION_NUMBER="A_SMALL", SERIES_NAME="Small Equity ETF", SERIES_ID="S_SMALL", NET_ASSETS="1000000"),
     ]
     holds = [
-        holding("A_VAN", "1", "APPLE INC", "037833100", "7.0"),
+        holding("A_VAN", "1", "APPLE INC", "037833100", "7.0", shares="10", value="2000"),
         holding("A_VAN", "2", "BERKSHIRE HATHAWAY INC", "084670702", "1.7"),
         holding("A_VAN", "3", "MICROSOFT CORP", "594918104", "6.5"),
         holding("A_VAN", "4", "NVIDIA CORP", "67066G104", "6.8"),
@@ -90,7 +91,7 @@ def test_full_flow(env):
         holding("A_VAN", "9", "APPLE INC", "037833100", "0.1"),  # 같은 종목 두 줄 → 합산
         holding("A_VAN", "10", "OTHER STOCKS", "333333333", "70"),
         holding("A_SPY", "23", "OTHER STOCKS", "333333333", "80"),
-        holding("A_SPY", "20", "MICROSOFT CORP", "594918104", "6.6"),
+        holding("A_SPY", "20", "MICROSOFT CORP", "594918104", "6.6", shares="0", value="500"),
         holding("A_SPY", "21", "APPLE INC", "037833100", "7.1"),
         holding("A_SPY", "22", "Tiny Co", "222222222", "0.0001"),
         holding("A_AGG", "30", "US TREASURY", "912828ZZ0", "95", cat="DBT"),
@@ -117,6 +118,9 @@ def test_full_flow(env):
     us_holdings.main(["--top", "2", "--local-zip", str(tmp / "q3.zip"), "--local-zip", str(tmp / "q2.zip"),
                       "--tickers-json", str(tj)])
     publish.main()
+
+    prices = json.loads((tmp / "cache/us_isin_price.json").read_text())
+    assert prices == {"US0378331005": 200.0}              # 2000달러 / 10주, 주식 수 0인 행은 버림
 
     out = tmp / "docs/v1"
     files = sorted(p.stem for p in (out / "holdings").glob("*.json"))

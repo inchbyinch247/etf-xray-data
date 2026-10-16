@@ -153,7 +153,7 @@ def load_holdings(reports: pd.DataFrame) -> pd.DataFrame:
             for ch in read_table(zf, "FUND_REPORTED_HOLDING",
                                  ["ACCESSION_NUMBER", "HOLDING_ID", "ISSUER_NAME", "ISSUER_TITLE",
                                   "ISSUER_CUSIP", "PERCENTAGE", "PAYOFF_PROFILE", "ASSET_CAT",
-                                  "INVESTMENT_COUNTRY"], chunksize=CHUNK):
+                                  "INVESTMENT_COUNTRY", "BALANCE", "UNIT", "CURRENCY_VALUE"], chunksize=CHUNK):
                 hold.append(ch[ch["ACCESSION_NUMBER"].isin(accs)])
             h = pd.concat(hold, ignore_index=True)
             ids = set(h["HOLDING_ID"])
@@ -263,6 +263,13 @@ def build(zips: list[Path], series_to_ticker: dict[str, str], top: int) -> None:
         if is_us_isin(i) and normalize_us_ticker(k) == k:
             isin_ticker[i] = k
     write_json(CACHE / "us_isin_ticker.json", dict(sorted(isin_ticker.items())))
+
+    # 국내 ETF PDF는 해외 종목을 주식 수로만 준다 → 비중 계산용 1주당 달러 가격(보고서 기준일, 펀드 간 중앙값)
+    ns = h[h["IS_EQ"] & (h["UNIT"] == "NS")]
+    px = pd.to_numeric(ns["CURRENCY_VALUE"], errors="coerce") / pd.to_numeric(ns["BALANCE"], errors="coerce")
+    ok = (px > 0) & (px < float("inf")) & (ns["IDENTIFIER_ISIN"].str.len() == 12)
+    prices = px[ok].groupby(ns.loc[ok, "IDENTIFIER_ISIN"].str.upper()).median()
+    write_json(CACHE / "us_isin_price.json", {k: round(float(v), 4) for k, v in sorted(prices.items())})
 
     stock_names: dict[str, Counter] = defaultdict(Counter)
     holdings_dir = OUT / "holdings"

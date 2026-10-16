@@ -126,6 +126,7 @@ def build(min_aum: float, start: dt.date) -> None:
     cfg = read_json(CONFIG / "kr_etfs.json", {})
     exclude, force = set(cfg.get("exclude", [])), set(cfg.get("include", []))
     isin_ticker = read_json(CACHE / "us_isin_ticker.json", {})
+    usd_price = read_json(CACHE / "us_isin_price.json", {})
 
     trd_dd, prices = latest_trade_date(start)
     log(f"[기준일] {trd_dd}, ETF {len(prices)}개")
@@ -160,22 +161,25 @@ def build(min_aum: float, start: dt.date) -> None:
     holdings_dir = OUT / "holdings"
     holdings_dir.mkdir(parents=True, exist_ok=True)
     as_of = f"{trd_dd[:4]}-{trd_dd[4:6]}-{trd_dd[6:]}"
-    instruments, kept, stock_names, debug = [], set(), {}, {}
+    instruments, kept, stock_names = [], set(), {}
     by_code = {x["code"]: x for x in report}
 
     for i, etf in enumerate(cands, 1):
         rows = post(BLD_PDF, isuCd=etf["isin"], trdDd=trd_dd)
         time.sleep(0.4)
-        parts, total_val = [], 0.0
+        parts, foreign, total_val = [], [], 0.0
         for p in rows:
             nm = pick(p, "COMPST_ISU_NM")
             val = num(pick(p, "VALU_AMT", "COMPST_AMT"))
             total_val += val
             if NON_STOCK_NAME.search(nm):
                 continue                                         # 현금·선물·스왑 등
-            key = constituent_key(pick(p, "COMPST_ISU_CD"), isin_ticker)
+            code = pick(p, "COMPST_ISU_CD").strip().upper()
+            key = constituent_key(code, isin_ticker)
             if key:
                 parts.append((key, nm, num(pick(p, "COMPST_RTO")), val))
+                if len(code) == 12 and not code.startswith("KR"):
+                    foreign.append((key, nm, code, num(pick(p, "COMPST_ISU_CU1_SHRS"))))
         if not any(w for _, _, w, _ in parts) and total_val > 0:     # 비중이 비어 있으면 금액으로 계산
             parts = [(k, n, v / total_val * 100, v) for k, n, _, v in parts]
         agg: dict[str, list] = {}
@@ -183,15 +187,25 @@ def build(min_aum: float, start: dt.date) -> None:
             a = agg.setdefault(k, [n, 0.0])
             a[1] += w
         equity = sum(w for _, w in agg.values())
+        estimated = False
+        if equity < MIN_EQUITY_PCT and foreign:
+            # 해외 주식은 PDF에 비중·금액 없이 주식 수만 있다 → 주식 수 × 미국 공시 가격으로 비중 추정
+            # shortcut: 가격이 SEC 분기 말 기준이라 그 뒤 주가 변동만큼 비중이 어긋남. 무료 일별 시세를 구하면 교체
+            priced = [(k, n, sh * usd_price[c]) for k, n, c, sh in foreign if c in usd_price and sh > 0]
+            tot = sum(v for *_, v in priced)
+            if tot > 0 and len(priced) >= 0.8 * len(foreign):
+                agg = {}
+                for k, n, v in priced:
+                    a = agg.setdefault(k, [n, 0.0])
+                    a[1] += v / tot * 100
+                equity, estimated = 100.0, True
         if equity < MIN_EQUITY_PCT and etf["code"] not in force:
             by_code[etf["code"]]["reason"] = f"주식 비중 {equity:.0f}% (스왑·현금 위주)"
-            if len(debug) < 3 and len(rows) > 20:  # shortcut: 해외주식 PDF 형식 진단용 임시 덤프, 원인 고치면 삭제
-                debug[etf["code"]] = rows[:15]
             continue
         cons = sorted(({"ticker": k, "name": n, "weight": round(w, 4)} for k, (n, w) in agg.items() if w >= 0.001),
                       key=lambda c: -c["weight"])
         write_json(holdings_dir / f"{etf['code']}.json", {
-            "ticker": etf["code"], "asOf": as_of, "source": f"{etf['issuer'] or '운용사'} 공시(PDF)",
+            "ticker": etf["code"], "asOf": as_of, "source": f"{etf['issuer'] or '운용사'} 공시(PDF)" + (" · 비중은 SEC 공시 가격으로 추정" if estimated else ""),
             "constituents": cons,
         })
         kept.add(etf["code"])
@@ -202,7 +216,6 @@ def build(min_aum: float, start: dt.date) -> None:
         if i % 50 == 0:
             log(f"  {i}/{len(cands)}")
 
-    write_json(REPORTS / "kr_debug_pdf_sample.json", debug, compact=False)
     for old in holdings_dir.glob("*.json"):
         if old.stem.isdigit() and old.stem not in kept:
             old.unlink()
