@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T08:58:17+00:00",
+  "generatedAt": "2026-10-16T09:44:27+00:00",
   "us": {
     "generatedAt": "2026-10-16T08:58:17+00:00",
     "datasets": [
@@ -9,7 +9,12 @@
     "etfCount": 300,
     "stockCount": 3727
   },
-  "kr": {},
+  "kr": {
+    "generatedAt": "2026-10-16T09:44:27+00:00",
+    "tradeDate": "20261015",
+    "etfCount": 149,
+    "stockCount": 817
+  },
   "sources": {
     "usHoldings": "SEC Form N-PORT",
     "krHoldings": "각 운용사 공시"
