@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import os
 import re
 import sys
 import time
@@ -23,7 +24,8 @@ from .common import CACHE, CONFIG, OUT, REPORTS, is_us_isin, kr_code_from_isin, 
 
 URL = "https://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd"
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (etf-xray-data)",
+    # 2026-02부터 KRX는 로그인 세션 없이는 'LOGOUT'만 돌려준다. 로그인 흐름은 브라우저 UA를 기대한다
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
     "Referer": "https://data.krx.co.kr/contents/MDC/MDI/mdiLoader/index.cmd",
 }
 BLD_PRICE = "dbms/MDC/STAT/standard/MDCSTAT04301"   # ETF 전종목 시세 (순자산총액 포함)
@@ -41,6 +43,25 @@ SESSION.headers.update(HEADERS)
 
 def log(*a):
     print(*a, flush=True)
+
+
+def login() -> None:
+    """KRX_ID/KRX_PW로 data.krx.co.kr에 로그인해 SESSION에 세션 쿠키를 심는다 (pykrx #276과 같은 흐름)."""
+    uid, pw = os.environ.get("KRX_ID"), os.environ.get("KRX_PW")
+    if not uid or not pw:
+        raise SystemExit("KRX_ID, KRX_PW 환경변수가 필요해요 (GitHub: Settings → Secrets and variables → Actions)")
+    page = "https://data.krx.co.kr/contents/MDC/COMS/client/MDCCOMS001.cmd"
+    SESSION.get(page, timeout=30)
+    SESSION.get("https://data.krx.co.kr/contents/MDC/COMS/client/view/login.jsp?site=mdc", headers={"Referer": page}, timeout=30)
+    form = {"mbrNm": "", "telNo": "", "di": "", "certType": "", "mbrId": uid, "pw": pw}
+    url = "https://data.krx.co.kr/contents/MDC/COMS/client/MDCCOMS001D1.cmd"
+    code = SESSION.post(url, data=form, headers={"Referer": page}, timeout=30).json().get("_error_code", "")
+    if code == "CD011":  # 다른 곳에 로그인돼 있음 → 기존 세션을 끊고 로그인
+        form["skipDup"] = "Y"
+        code = SESSION.post(url, data=form, headers={"Referer": page}, timeout=30).json().get("_error_code", "")
+    if code != "CD001":
+        raise SystemExit(f"KRX 로그인 실패 (코드 {code or '없음'}). 아이디·비밀번호를 확인해 주세요")
+    log("[KRX] 로그인 성공")
 
 
 def post(bld: str, **params) -> list[dict]:
@@ -208,6 +229,7 @@ def main(argv=None):
     a = ap.parse_args(argv)
     kst = dt.datetime.now(dt.timezone(dt.timedelta(hours=9))).date()
     start = dt.datetime.strptime(a.date, "%Y%m%d").date() if a.date else kst
+    login()
     build(a.min_aum, start)
 
 

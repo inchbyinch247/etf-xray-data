@@ -23,6 +23,9 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - name: 수집
+        env:
+          KRX_ID: ${{ secrets.KRX_ID }}
+          KRX_PW: ${{ secrets.KRX_PW }}
         run: |
           python -m pipeline.kr_holdings
           python -m pipeline.publish
