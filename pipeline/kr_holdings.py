@@ -160,7 +160,7 @@ def build(min_aum: float, start: dt.date) -> None:
     holdings_dir = OUT / "holdings"
     holdings_dir.mkdir(parents=True, exist_ok=True)
     as_of = f"{trd_dd[:4]}-{trd_dd[4:6]}-{trd_dd[6:]}"
-    instruments, kept, stock_names = [], set(), {}
+    instruments, kept, stock_names, debug = [], set(), {}, {}
     by_code = {x["code"]: x for x in report}
 
     for i, etf in enumerate(cands, 1):
@@ -185,6 +185,8 @@ def build(min_aum: float, start: dt.date) -> None:
         equity = sum(w for _, w in agg.values())
         if equity < MIN_EQUITY_PCT and etf["code"] not in force:
             by_code[etf["code"]]["reason"] = f"주식 비중 {equity:.0f}% (스왑·현금 위주)"
+            if len(debug) < 3 and len(rows) > 20:  # shortcut: 해외주식 PDF 형식 진단용 임시 덤프, 원인 고치면 삭제
+                debug[etf["code"]] = rows[:15]
             continue
         cons = sorted(({"ticker": k, "name": n, "weight": round(w, 4)} for k, (n, w) in agg.items() if w >= 0.001),
                       key=lambda c: -c["weight"])
@@ -200,6 +202,7 @@ def build(min_aum: float, start: dt.date) -> None:
         if i % 50 == 0:
             log(f"  {i}/{len(cands)}")
 
+    write_json(REPORTS / "kr_debug_pdf_sample.json", debug, compact=False)
     for old in holdings_dir.glob("*.json"):
         if old.stem.isdigit() and old.stem not in kept:
             old.unlink()
