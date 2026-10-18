@@ -2,7 +2,7 @@ name: 국내 ETF 구성종목 갱신
 
 on:
   schedule:
-    - cron: "17 10 * * 1-5"   # 평일 10:17 UTC (한국 19:17). 국내 PDF는 매일 바뀐다
+    - cron: "17 10 * * 1"   # 매주 월요일 10:17 UTC (한국 19:17). PDF는 매일 바뀌지만 비중 변화가 작아 주 1회로 충분
   workflow_dispatch:        # Actions 탭에서 'Run workflow'로 바로 실행
 
 permissions:
