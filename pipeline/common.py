@@ -56,6 +56,12 @@ def is_us_isin(isin: str | None) -> bool:
     return bool(isin) and isin.upper().startswith("US")
 
 
+def is_kr_code(s: str) -> bool:
+    """국내 종목코드인지 — 숫자로 시작하는 6자리(005930, 0000J0). 미국 티커는 영문으로 시작한다.
+    isdigit()만 보면 영문이 섞인 새 코드(0000J0 등)를 미국 것으로 오인해 파일을 지운다."""
+    return len(s) == 6 and s[:1].isdigit() and s.isalnum()
+
+
 def kr_code_from_isin(isin: str | None) -> str | None:
     """KR7005930003 → 005930 (국내 종목코드). 국내 직접 보유분과 합쳐지게 한다.
     KR7은 주권·ETF 등 지분증권이고, 선물(KR4)·채권(KR6) 등은 None."""

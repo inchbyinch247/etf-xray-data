@@ -20,7 +20,7 @@ import time
 
 import requests
 
-from .common import CACHE, CONFIG, OUT, REPORTS, is_us_isin, kr_code_from_isin, read_json, write_json
+from .common import CACHE, CONFIG, OUT, REPORTS, is_kr_code, is_us_isin, kr_code_from_isin, read_json, write_json
 
 URL = "https://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd"
 HEADERS = {
@@ -217,7 +217,7 @@ def build(min_aum: float, start: dt.date) -> None:
             log(f"  {i}/{len(cands)}")
 
     for old in holdings_dir.glob("*.json"):
-        if old.stem.isdigit() and old.stem not in kept:
+        if is_kr_code(old.stem) and old.stem not in kept:
             old.unlink()
     kr_etfs = {x["code"] for x in report}
     instruments += [{"ticker": k, "name": v, "kind": "STOCK", "market": "KR"}

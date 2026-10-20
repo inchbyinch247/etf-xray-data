@@ -27,7 +27,7 @@ import requests
 
 from .common import (
     CACHE, CONFIG, OUT, REPORTS, SEC_USER_AGENT,
-    is_us_isin, kr_code_from_isin, normalize_us_ticker, read_json, write_json,
+    is_kr_code, is_us_isin, kr_code_from_isin, normalize_us_ticker, read_json, write_json,
 )
 from . import figi
 
@@ -275,7 +275,7 @@ def build(zips: list[Path], series_to_ticker: dict[str, str], top: int) -> None:
     holdings_dir = OUT / "holdings"
     holdings_dir.mkdir(parents=True, exist_ok=True)
     for old in holdings_dir.glob("*.json"):
-        if old.stem not in set(keep["TICKER"]) and not old.stem.isdigit():
+        if old.stem not in set(keep["TICKER"]) and not is_kr_code(old.stem):
             old.unlink()  # 목록에서 빠진 미국 ETF 파일 정리 (국내 6자리 파일은 그대로)
 
     etf_index = []
