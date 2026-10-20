@@ -1,0 +1,9 @@
+{
+  "_설명": "레버리지 ETF는 구성종목이 스왑·선물이라, 기초지수 ETF(underlying)의 구성종목에 배수(leverage)를 곱해 계산한다. 인버스(음수 배수)는 지원하지 않는다.",
+  "etfs": [
+    {"ticker": "TQQQ", "name": "ProShares UltraPro QQQ", "market": "US", "underlying": "QQQ", "leverage": 3},
+    {"ticker": "QLD", "name": "ProShares Ultra QQQ", "market": "US", "underlying": "QQQ", "leverage": 2},
+    {"ticker": "418660", "name": "TIGER 미국나스닥100레버리지(합성)", "market": "KR", "underlying": "QQQ", "leverage": 2},
+    {"ticker": "409820", "name": "KODEX 미국나스닥100레버리지(합성 H)", "market": "KR", "underlying": "QQQ", "leverage": 2}
+  ]
+}

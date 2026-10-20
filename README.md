@@ -20,6 +20,15 @@
 
 GitHub 웹에서 파일을 열고 연필 아이콘을 눌러 고친 뒤 저장하면, 다음 실행부터 반영돼요.
 
+### 레버리지 ETF: `config/leveraged.json`
+
+레버리지 ETF는 주식 대신 스왑·선물을 담아서 구성종목을 그대로 쓸 수 없어요. 그래서 기초지수 ETF(`underlying`)의 구성종목에 배수(`leverage`)를 붙인 파일을 만들고, 앱이 평가금액 × 비중 × 배수로 계산해요.
+
+- 항목 예: `{"ticker": "TQQQ", "name": "ProShares UltraPro QQQ", "market": "US", "underlying": "QQQ", "leverage": 3}`
+- 국내 상품은 `ticker`에 6자리 코드를 넣어요. 코드는 `reports/kr_etf_list.csv`에서 찾을 수 있어요.
+- 기초지수 ETF는 이미 수집되는 ETF여야 해요(예: QQQ, SPY). 없으면 그 항목은 건너뛰어요.
+- 인버스(음수 배수)는 지원하지 않아요.
+
 ## 실행
 
 - 미국: 매월 6일 자동 실행. SEC 데이터가 분기마다 갱신돼서 이 정도면 충분해요. 한 번 도는 데 30~60분쯤 걸려요.
