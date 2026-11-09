@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-06T04:05:29+00:00",
+  "generatedAt": "2026-11-09T20:53:28+00:00",
   "us": {
     "generatedAt": "2026-11-06T04:05:28+00:00",
     "datasets": [
@@ -10,10 +10,10 @@
     "stockCount": 3727
   },
   "kr": {
-    "generatedAt": "2026-11-02T20:27:29+00:00",
-    "tradeDate": "20261030",
-    "etfCount": 255,
-    "stockCount": 819
+    "generatedAt": "2026-11-09T20:53:28+00:00",
+    "tradeDate": "20261109",
+    "etfCount": 242,
+    "stockCount": 809
   },
   "sources": {
     "usHoldings": "SEC Form N-PORT",
